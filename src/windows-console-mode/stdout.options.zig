@@ -10,13 +10,13 @@ const std = @import("std");
 /// Wraps the flags that set Stdouts's console mode on windows. Returns a DWORD with apply method that masks the mode settings over the given parameter. If a setting is "null", the word will not be changed, otherwise the appropriate bit will be set to 1 or 0, and the new word will be returned.
 pub const ModeOptions = struct {
     // whether control sequences (like backspace) as processed; should be enabled if using vts
-    processed_output: ?bool,
+    processed_output: ?bool = null,
     // causes auto scrolling and moving to next and wrap
-    wrap_eol: ?bool,
+    wrap_eol: ?bool = null,
     // whether Console Virtual Terminal Sequences can be used
-    virtual_terminal: ?bool,
-    disable_auto_return: ?bool,
-    lvb_grid_worldwide: ?bool,
+    virtual_terminal: ?bool = null,
+    disable_auto_return: ?bool = null,
+    lvb_grid_worldwide: ?bool = null,
 
     fn applyStep(check: ?bool, mask: win.DWORD, mask_to_0: *win.DWORD, mask_to_1: *win.DWORD) void {
         if (check != null) {
@@ -29,7 +29,7 @@ pub const ModeOptions = struct {
     }
 
     /// Takes an DWORD, generally the existing mode, applies each of its members as the correct bitmask, and returns that DWORD
-    pub fn apply(self: *ModeOptions, original_mode: win.DWORD) win.DWORD {
+    pub fn apply(self: *const ModeOptions, original_mode: win.DWORD) win.DWORD {
         var mask_to_0: win.DWORD = 0;
         var mask_to_1: win.DWORD = 0;
 
