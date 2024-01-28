@@ -82,7 +82,7 @@ pub const Manager = struct {
     }
 
     /// Set Stdin mode from an options object
-    pub fn SetStdinMode(self: *Manager, to: *const stdinOptions) !void {
+    pub fn SetStdinMode(self: *Manager, to: stdinOptions) !void {
         if (self.saved_stdin == null) {
             return ManagerErrors.NoSavedMode;
         }
@@ -91,7 +91,7 @@ pub const Manager = struct {
     }
 
     /// Set Stdout mode from an options object
-    pub fn SetStdoutMode(self: *Manager, to: *const stdoutOptions) !void {
+    pub fn SetStdoutMode(self: *Manager, to: stdoutOptions) !void {
         if (self.saved_stdout == null) {
             return ManagerErrors.NoSavedMode;
         }

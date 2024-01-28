@@ -1,6 +1,23 @@
 const std = @import("std");
+const VT = @import("virtual-terminal/sequences.zig");
+const WC = @import("./windows-console-mode/winconsole.zig");
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("This code is meant to compile as a library.", .{});
+    // // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
+    // const cons = WC.Manager{};
+    // try cons.SaveStdoutMode();
+    // try cons.RestoreStdout();
+    // cons.SetStdoutMode(WC.StdoutOptions{
+    //     .virtual_terminal = true,
+    // });
+
+    var cons = WC.Manager{};
+    try cons.SaveStdoutMode();
+    try cons.SetStdoutMode(.{
+        .virtual_terminal = true,
+    });
+    std.debug.print(VT.Format.BG.Red ++ "Hi!\n" ++ VT.Format.BG.Default, .{});
+    try cons.RestoreStdout();
+
+    // cons.RestoreStdout();
 }
