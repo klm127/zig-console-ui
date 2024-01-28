@@ -1,12 +1,14 @@
+// STDIn Options (ConsoleMode) wrapper struct
+
 const win = @cImport({
     @cInclude("windows.h");
 });
 
 const std = @import("std");
 
-// see: https://learn.microsoft.com/en-us/windows/console/setconsolemode
-// Wraps the flags that set Stdin's console mode. Can produce a DWORD with apply method that masks the mode settings appropriately over the given parameter word. If a setting is "null", the word will not be changed, otherwise the appropriate bit will be set to 1 or 0.
-const stdinModeOptions = struct {
+/// [Microsoft Docs] https://learn.microsoft.com/en-us/windows/console/setconsolemode
+/// Wraps the flags that set Stdin's console mode on windows. Returns a DWORD with apply method that masks the mode settings over the given parameter. If a setting is "null", the word will not be changed, otherwise the appropriate bit will be set to 1 or 0, and the new word will be returned.
+pub const ModeOptions = struct {
     echo: ?bool = null,
     insert: ?bool = null,
     // whether readConsole returns only at carriage return; if false, returns for every character pressed
@@ -32,8 +34,8 @@ const stdinModeOptions = struct {
         }
     }
 
-    // Takes an DWORD and applies each of the masks appropriately
-    pub fn apply(self: *stdinModeOptions, original_mode: win.DWORD) win.DWORD {
+    /// Takes an DWORD, generally the existing mode, applies each of its members as the correct bitmask, and returns that DWORD
+    pub fn apply(self: *ModeOptions, original_mode: win.DWORD) win.DWORD {
         var mask_to_0: win.DWORD = 0;
         var mask_to_1: win.DWORD = 0;
 
@@ -46,9 +48,8 @@ const stdinModeOptions = struct {
         applyStep(self.window_input, win.ENABLE_WINDOW_INPUT, &mask_to_0, &mask_to_1);
         applyStep(self.virtual_terminal_input, win.ENABLE_VIRTUAL_TERMINAL_INPUT, &mask_to_0, &mask_to_1);
 
-        var new_word = ~mask_to_0 & original_mode;
-        new_word = new_word | mask_to_1;
-        return new_word;
+        const new_word = ~mask_to_0 & original_mode;
+        return new_word | mask_to_1;
     }
 };
 
@@ -56,17 +57,17 @@ const expect = std.testing.expect;
 
 test "StdinModeOptions" {
     const helpers = struct {
-        fn checkOneFlag(opts: *stdinModeOptions, flag: win.DWORD) !void {
+        fn checkOneFlag(opts: *ModeOptions, flag: win.DWORD) !void {
             const result = opts.apply(0);
             try expect((result & flag) == flag);
         }
-        fn checkOneFlagOff(opts: *stdinModeOptions, flag: win.DWORD) !void {
+        fn checkOneFlagOff(opts: *ModeOptions, flag: win.DWORD) !void {
             const result = opts.apply(~@as(win.DWORD, 0));
             try expect(result & flag == 0);
         }
     };
 
-    var tcase1 = stdinModeOptions{ .echo = true, .insert = true, .line_input = true, .mouse_input = true, .processed_input = false, .quick_edit_mode = false, .window_input = false, .virtual_terminal_input = false };
+    var tcase1 = ModeOptions{ .echo = true, .insert = true, .line_input = true, .mouse_input = true, .processed_input = false, .quick_edit_mode = false, .window_input = false, .virtual_terminal_input = false };
     try helpers.checkOneFlag(&tcase1, win.ENABLE_ECHO_INPUT);
     try helpers.checkOneFlag(&tcase1, win.ENABLE_INSERT_MODE);
     try helpers.checkOneFlag(&tcase1, win.ENABLE_LINE_INPUT);
@@ -76,7 +77,7 @@ test "StdinModeOptions" {
     try helpers.checkOneFlagOff(&tcase1, win.ENABLE_WINDOW_INPUT);
     try helpers.checkOneFlagOff(&tcase1, win.ENABLE_VIRTUAL_TERMINAL_INPUT);
 
-    var tcase2 = stdinModeOptions{ .echo = false, .insert = false, .line_input = false, .mouse_input = false, .processed_input = true, .quick_edit_mode = true, .window_input = true, .virtual_terminal_input = true };
+    var tcase2 = ModeOptions{ .echo = false, .insert = false, .line_input = false, .mouse_input = false, .processed_input = true, .quick_edit_mode = true, .window_input = true, .virtual_terminal_input = true };
     try helpers.checkOneFlagOff(&tcase2, win.ENABLE_ECHO_INPUT);
     try helpers.checkOneFlagOff(&tcase2, win.ENABLE_INSERT_MODE);
     try helpers.checkOneFlagOff(&tcase2, win.ENABLE_LINE_INPUT);
