@@ -6,7 +6,6 @@ test "drawSquare" {
     const stdout = std.io.getStdOut();
     const writer = stdout.writer();
 
-    const col = @as(*const []u8, @alignCast(@ptrCast(vt.Format.BG.Blue)));
-
-    draw.BgSquare(5, 5, 5, 5, col, writer);
+    _ = try draw.BgSquare(5, 5, 5, 5, vt.Format.BG.Blue, writer);
+    _ = try draw.BgSquare(30, 2, 6, 20, vt.Format.BG.Green, writer);
 }

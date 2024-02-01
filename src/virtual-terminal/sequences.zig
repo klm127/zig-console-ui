@@ -118,7 +118,6 @@ pub const Pos = struct {
         for (0..3, 6..9) |from, to| {
             s[to] = xs[from];
         }
-        std.debug.print("\n\nGot:{s}\n\n", .{s[1..]});
         return s;
     }
 
