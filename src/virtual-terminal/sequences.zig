@@ -3,6 +3,35 @@ const std = @import("std");
 const ESC = [1]u8{0x1b};
 const ESC2 = [2]u8{ 0x1b, '[' };
 
+const SequenceError = error{TooHighN};
+
+fn getU6Coder(comptime keychar: u8) type {
+    return struct {
+        fn callable(n: u8) [6]u8 {
+            var sel = [6]u8{ 0x1b, '[', '?', '?', '?', keychar };
+            sel[2] = '0' + n / 100;
+            sel[3] = '0' + n / 10;
+            sel[4] = '0' + n % 10;
+            return sel;
+        }
+    };
+}
+
+fn qp(comptime lead: []const u8, n: usize) void {
+    std.debug.print("{s}: n={d}\n", .{ lead, n });
+}
+
+const t = "x";
+
+/// returns a char array with leading 0s, so '27' will be '027'.
+fn getU8Lead0(n: u8) [3]u8 {
+    var digs: [3]u8 = undefined;
+    digs[0] = '0' + n / 100;
+    digs[1] = '0' + n / 10;
+    digs[2] = '0' + n % 10;
+    return digs;
+}
+
 /// Viewport scrolling
 pub const Viewport = struct {
     /// Scroll text up by N
@@ -54,70 +83,45 @@ pub const Pos = struct {
     pub const SavePos = ESC ++ "7";
     /// Restore Cursor Position in memory.
     pub const RestorePos = ESC ++ "8";
-    /// Expects a buffer of at least size 4 for movements of 0-9
-    pub fn Up(n: i32, buf: []u8) ![]u8 {
-        return try std.fmt.bufPrint(
-            buf,
-            ESC2 ++ "{d}A",
-            .{n},
-        );
+
+    /// Move cursor up by N (maintaining horizontal alignment.)
+    pub const Up = getU6Coder('A').callable;
+
+    /// Move cursor down by N (maintaining horizontal alignment.)
+    pub const Down = getU6Coder('B').callable;
+
+    /// Move cursor right by N.
+    pub const Right = getU6Coder('C').callable;
+
+    /// Move cursor left by N.
+    pub const Left = getU6Coder('D').callable;
+
+    /// Move cursor forward/down N lines; horizontal alignment will be set to 0.
+    pub const NextLine = getU6Coder('E').callable;
+
+    /// Move cursor back/up N lines; horizontal alignment will be set to 0.
+    pub const PrevLine = getU6Coder('F').callable;
+
+    /// Moves the cursor to the nth position horizontally in the current line.
+    pub const HorizontalAbsolute = getU6Coder('G').callable;
+
+    /// Moves the cursor to the nth position vertically in the current line.
+    pub const VerticalAbsolute = getU6Coder('f').callable;
+
+    pub fn To(x: u8, y: u8) [10]u8 {
+        var s = [10]u8{ 0x1b, '[', 'y', 'y', 'y', ';', 'x', 'x', 'x', 'H' };
+        const xs = getU8Lead0(x);
+        const ys = getU8Lead0(y);
+        for (0..3, 2..5) |from, to| {
+            s[to] = ys[from];
+        }
+        for (0..3, 6..9) |from, to| {
+            s[to] = xs[from];
+        }
+        std.debug.print("\n\nGot:{s}\n\n", .{s[1..]});
+        return s;
     }
-    /// Expects a buffer of at least size 4 for movements of 0-9
-    pub fn Down(n: i32, buf: []u8) ![]u8 {
-        return try std.fmt.bufPrint(
-            buf,
-            ESC2 ++ "{d}B",
-            .{n},
-        );
-    }
-    /// Expects a buffer of at least size 4 for movements of 0-9
-    pub fn Right(n: i32, buf: []u8) ![]u8 {
-        return try std.fmt.bufPrint(
-            buf,
-            ESC2 ++ "{d}C",
-            .{n},
-        );
-    }
-    /// Expects a buffer of at least size 4 for movements of 0-9
-    pub fn Left(n: i32, buf: []u8) ![]u8 {
-        return try std.fmt.bufPrint(
-            buf,
-            ESC2 ++ "{d}D",
-            .{n},
-        );
-    }
-    /// Expects a buffer of at least size 4 for movements of 0-9
-    pub fn NextLine(n: i32, buf: []u8) ![]u8 {
-        return try std.fmt.bufPrint(
-            buf,
-            ESC2 ++ "{d}E",
-            .{n},
-        );
-    }
-    /// Expects a buffer of at least size 4 for movements of 0-9
-    pub fn PrevLine(n: i32, buf: []u8) ![]u8 {
-        return try std.fmt.bufPrint(
-            buf,
-            ESC2 ++ "{d}F",
-            .{n},
-        );
-    }
-    /// Expects a buffer of at least size 4 for movements of 0-9; moves cursor to the <n>th position horizontally in the current line
-    pub fn HorizontalAbsolute(n: i32, buf: []u8) ![]u8 {
-        return try std.fmt.bufPrint(
-            buf,
-            ESC2 ++ "{d}G",
-            .{n},
-        );
-    }
-    /// Expects a buffer of at least size 4 for movements of 0-9; moves cursor to the <n>th position vertical in the current col
-    pub fn VerticalAbsolute(n: i32, buf: []u8) ![]u8 {
-        return try std.fmt.bufPrint(
-            buf,
-            ESC2 ++ "{d}f",
-            .{n},
-        );
-    }
+
     /// Save cursor, ansi.sys emulation
     pub const SavePosAnsi = ESC2 ++ "s";
     /// Restore cursor, ansi.sys emulation
@@ -126,45 +130,19 @@ pub const Pos = struct {
 
 pub const Modify = struct {
     /// Insert <n> spaces at current cursor
-    pub fn InsertSpace(n: i32, buf: []u8) ![]u8 {
-        return try std.fmt.bufPrint(
-            buf,
-            ESC2 ++ "{d}@",
-            .{n},
-        );
-    }
+    pub const InsertSpace = getU6Coder('@').callable;
+
     /// Delete <n> characters, shifting in from right
-    pub fn Delete(n: i32, buf: []u8) ![]u8 {
-        return try std.fmt.bufPrint(
-            buf,
-            ESC2 ++ "{d}P",
-            .{n},
-        );
-    }
+    pub const Delete = getU6Coder('P').callable;
+
     /// Erase <n> spaces at current cursor (overwrite with space)
-    pub fn Erase(n: i32, buf: []u8) ![]u8 {
-        return try std.fmt.bufPrint(
-            buf,
-            ESC2 ++ "{d}X",
-            .{n},
-        );
-    }
+    pub const Erase = getU6Coder('X').callable;
+
     /// Erase <n> lines into buffer at cursor position; line cursor is currently on is one of those shifted downwards
-    pub fn InsertLine(n: i32, buf: []u8) ![]u8 {
-        return try std.fmt.bufPrint(
-            buf,
-            ESC2 ++ "{d}L",
-            .{n},
-        );
-    }
+    pub const InsertLine = getU6Coder('L').callable;
+
     /// Delete <n> lines, including the one the cursor is on
-    pub fn DeleteLine(n: i32, buf: []u8) ![]u8 {
-        return try std.fmt.bufPrint(
-            buf,
-            ESC2 ++ "{d}M",
-            .{n},
-        );
-    }
+    pub const DeleteLine = getU6Coder('M').callable;
 };
 
 /// Text formatting, such as colors
@@ -205,22 +183,26 @@ pub const Format = struct {
         pub const BrightCyan = ESC2 ++ "106" ++ "m";
         ///Applies bold/bright white to background
         pub const BrightWhite = ESC2 ++ "107" ++ "m";
-        ///Set BG to specified RGB
-        pub fn RGB(r: u8, g: u8, b: u8, buf: []u8) ![]u8 {
-            return try std.fmt.bufPrint(
-                buf,
-                ESC2 ++ "48;2;{d};{d};{d}m",
-                .{ r, g, b },
-            );
-        }
-        ///Set background color to <s> index in 88 or 256 color table
-        pub fn Indexed(n: u8, buf: []u8) ![]u8 {
-            return try std.fmt.bufPrint(
-                buf,
-                ESC2 ++ "48;5;{d}m",
-                .{n},
-            );
-        }
+
+        // const RGB_start = ESC2 ++ "48;2;"
+
+        // ///Set BG to specified RGB
+        // pub fn RGB(r: u8, g: u8, b: u8, buf: []u8) ![]u8 {
+        //     return try std.fmt.bufPrint(
+        //         buf,
+        //         ESC2 ++ "48;2;{d};{d};{d}m",
+        //         .{ r, g, b },
+        //     );
+        // }
+        // pub const temp = ESC2 ++ "48;2;";
+        //Set background color to <s> index in 88 or 256 color table
+        // pub fn Indexed(n: u8, buf: []u8) ![]u8 {
+        //     return try std.fmt.bufPrint(
+        //         buf,
+        //         ESC2 ++ "48;5;{d}m",
+        //         .{n},
+        //     );
+        // }
     };
     /// Foreground Color
     pub const FG = struct {
@@ -258,22 +240,22 @@ pub const Format = struct {
         pub const BrightCyan = ESC2 ++ "96" ++ "m";
         ///Applies bold/bright white to foreground
         pub const BrightWhite = ESC2 ++ "97" ++ "m";
-        ///Set FG to specified RGB
-        pub fn RGB(r: u8, g: u8, b: u8, buf: []u8) ![]u8 {
-            return try std.fmt.bufPrint(
-                buf,
-                ESC2 ++ "38;2;{d};{d};{d}m",
-                .{ r, g, b },
-            );
-        }
-        ///Set foreground color to <s> index in 88 or 256 color table
-        pub fn Indexed(n: u8, buf: []u8) ![]u8 {
-            return try std.fmt.bufPrint(
-                buf,
-                ESC2 ++ "38;5;{d}m",
-                .{n},
-            );
-        }
+        //Set FG to specified RGB
+        // pub fn RGB(r: u8, g: u8, b: u8, buf: []u8) ![]u8 {
+        //     return try std.fmt.bufPrint(
+        //         buf,
+        //         ESC2 ++ "38;2;{d};{d};{d}m",
+        //         .{ r, g, b },
+        //     );
+        // }
+        //Set foreground color to <s> index in 88 or 256 color table
+        // pub fn Indexed(n: u8, buf: []u8) ![]u8 {
+        //     return try std.fmt.bufPrint(
+        //         buf,
+        //         ESC2 ++ "38;5;{d}m",
+        //         .{n},
+        //     );
+        // }
     };
     ///Restore defaults
     pub const Default = ESC2 ++ "0" ++ "m";

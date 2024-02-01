@@ -17,7 +17,9 @@ pub fn main() !void {
         .virtual_terminal = true,
     });
     std.debug.print(VT.Format.BG.Red ++ "Hi!\n" ++ VT.Format.BG.Default, .{});
-    try cons.RestoreStdout();
 
-    // cons.RestoreStdout();
+    const sout = std.io.getStdOut();
+    const writer = sout.writer();
+    _ = writer; // autofix
+    try cons.RestoreStdout();
 }
