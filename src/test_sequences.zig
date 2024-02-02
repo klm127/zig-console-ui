@@ -14,5 +14,12 @@ test "sequences" {
 
     std.debug.print("{s}", .{vt.Format.BG.Blue ++ "\nHello\n" ++ vt.Format.Default});
 
+    std.debug.print("\n\t{s}R{s}G{s}B{s}\n", .{
+        vt.Format.BG.RGB(200, 10, 10),
+        vt.Format.BG.Default ++ vt.Format.FG.RGB(5, 255, 50),
+        vt.Format.FG.Default ++ vt.Format.BG.RGB(100, 100, 255),
+        vt.Format.Default,
+    });
+
     try cons.RestoreStdout();
 }

@@ -1,3 +1,6 @@
+// Most of the VTEs are generally configured run with dynamic runtime values rather than precompiling strings.
+// It would be slightly faster to precompile strings, such as by using std.fmt.comptimePrint, but we would lose dynamicism of windows.
+// We could add a parallel comptime version of the sequences in the future, but the time saved is probably not worth it.
 const std = @import("std");
 
 const ESC = [1]u8{0x1b};
@@ -7,6 +10,7 @@ const SequenceError = error{TooHighN};
 
 fn getU6Coder(comptime keychar: u8) type {
     return struct {
+        key: keychar,
         fn callable(n: u8) [6]u8 {
             var sel = [6]u8{ 0x1b, '[', '?', '?', '?', keychar };
             sel[2] = '0' + n / 100;
@@ -15,10 +19,6 @@ fn getU6Coder(comptime keychar: u8) type {
             return sel;
         }
     };
-}
-
-fn qp(comptime lead: []const u8, n: usize) void {
-    std.debug.print("{s}: n={d}\n", .{ lead, n });
 }
 
 const t = "x";
@@ -183,16 +183,11 @@ pub const Format = struct {
         ///Applies bold/bright white to background
         pub const BrightWhite = ESC2 ++ "107" ++ "m";
 
-        // const RGB_start = ESC2 ++ "48;2;"
-
-        // ///Set BG to specified RGB
-        // pub fn RGB(r: u8, g: u8, b: u8, buf: []u8) ![]u8 {
-        //     return try std.fmt.bufPrint(
-        //         buf,
-        //         ESC2 ++ "48;2;{d};{d};{d}m",
-        //         .{ r, g, b },
-        //     );
-        // }
+        const bg_fmt = ESC2 ++ "48;2;{d};{d};{d}m";
+        /// RGBs require their arguments at compile time
+        pub fn RGB(comptime r: u8, comptime g: u8, comptime b: u8) *const [std.fmt.count(bg_fmt, .{ r, g, b }):0]u8 {
+            return std.fmt.comptimePrint(bg_fmt, .{ r, g, b });
+        }
         // pub const temp = ESC2 ++ "48;2;";
         //Set background color to <s> index in 88 or 256 color table
         // pub fn Indexed(n: u8, buf: []u8) ![]u8 {
@@ -239,6 +234,12 @@ pub const Format = struct {
         pub const BrightCyan = ESC2 ++ "96" ++ "m";
         ///Applies bold/bright white to foreground
         pub const BrightWhite = ESC2 ++ "97" ++ "m";
+
+        const fg_fmt = ESC2 ++ "38;2;{d};{d};{d}m";
+        /// RGBs require their arguments at compile time
+        pub fn RGB(comptime r: u8, comptime g: u8, comptime b: u8) *const [std.fmt.count(fg_fmt, .{ r, g, b }):0]u8 {
+            return std.fmt.comptimePrint(fg_fmt, .{ r, g, b });
+        }
         //Set FG to specified RGB
         // pub fn RGB(r: u8, g: u8, b: u8, buf: []u8) ![]u8 {
         //     return try std.fmt.bufPrint(
