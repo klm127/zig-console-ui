@@ -54,7 +54,7 @@ pub const Coord = struct {
     }
 };
 
-test "Coord" {
+test {
     const std = @import("std");
     const expect = std.testing.expect;
     var c = Coord{ .x = 0, .y = 0 };

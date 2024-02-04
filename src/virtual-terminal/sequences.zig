@@ -280,3 +280,16 @@ pub const Buffer = struct {
     /// Switches to the main buffer.
     pub const UseMain = ESC ++ "?1049l";
 };
+
+test {
+    std.debug.print("{s}{s}", .{ Pos.To(60, 10), "WHATS UP!" });
+
+    std.debug.print("{s}", .{Format.BG.Blue ++ "\nHello\n" ++ Format.Default});
+
+    std.debug.print("\n\t{s}R{s}G{s}B{s}\n", .{
+        Format.BG.RGB(200, 10, 10),
+        Format.BG.Default ++ Format.FG.RGB(5, 255, 50),
+        Format.FG.Default ++ Format.BG.RGB(100, 100, 255),
+        Format.Default,
+    });
+}

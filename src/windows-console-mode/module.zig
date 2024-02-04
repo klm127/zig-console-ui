@@ -6,11 +6,12 @@ pub const Manager = manager;
 pub const StdinOptions = inOpts;
 pub const StdoutOptions = outOpts;
 
-test "all" {
+test "windows-console-mode" {
+    _ = @import("std").testing.refAllDecls(@This());
     var m = Manager{};
     try m.SaveStdoutMode();
     try m.SetStdoutMode(StdoutOptions{
         .virtual_terminal = true,
     });
-    try m.RestoreStdout();
+    m.RestoreStdout();
 }

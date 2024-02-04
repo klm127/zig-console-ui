@@ -1,4 +1,4 @@
-const vt = @import("../virtual-terminal/sequences.zig");
+const vt = @import("../virtual-terminal/module.zig").Sequences;
 
 const _bgLookup: [17][*:0]const u8 = [_][*:0]const u8{
     vt.Format.BG.Black,
@@ -70,3 +70,16 @@ pub const Color = enum(u8) {
         return vt.Format.Default;
     }
 };
+
+test {
+    const std = @import("std");
+    const blue = Color.Blue;
+    const default = Color.Default;
+    const red = Color.BrightRed;
+    std.debug.print("\n{s}Blue!{s} then {s}Red!{s}\n", .{
+        blue.BG(),
+        default.BG(),
+        red.FG(),
+        red.Clear(),
+    });
+}

@@ -1,15 +1,15 @@
 const std = @import("std");
 
-const virt = @import("../virtual-terminal/vt.zig");
+const virt = @import("../virtual-terminal/module.zig");
 const vt = virt.Sequences;
 const char = virt.Chars;
-const Primitives = @import("Primitives.zig");
+const Coord = @import("Coord.zig").Coord;
 
 const MenuboxError = error{ TooManyItems, MenuOutOfBounds };
 
 const Menubox = struct {
-    Position: Primitives.Coord,
-    Dimensions: Primitives.Coord,
+    Position: Coord,
+    Dimensions: Coord,
     content: []u8,
     selected: ?u8 = null,
     len: u8 = 0,
@@ -154,11 +154,38 @@ pub fn CreateMenuBox(allocator: std.mem.Allocator, h: u8, w: u8) !Menubox {
         content[i] = ' ';
     }
     return Menubox{
-        .Position = Primitives.Coord{},
-        .Dimensions = Primitives.Coord{
+        .Position = Coord{},
+        .Dimensions = Coord{
             .y = h,
             .x = w,
         },
         .content = content,
     };
+}
+
+test {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    const allocator = arena.allocator();
+    defer arena.deinit();
+
+    const stdout_file = std.io.getStdOut();
+    const writer = stdout_file.writer();
+
+    var mb = try CreateMenuBox(allocator, 10, 20);
+    mb.SetColors(vt.Format.FG.BrightGreen, vt.Format.BG.Default);
+    try mb.Append("hello");
+    try mb.Append("hello");
+    try mb.Append("hello");
+    try mb.Append("hello");
+    try mb.Append("this sentence is 20!");
+    try mb.Append("this sentence is: 21!");
+    try mb.SetSelected(2);
+    mb.SelectNext();
+    mb.SelectNext();
+    mb.SelectPrevious();
+    mb.Position.x = 5;
+    try mb.Print(writer);
+    try mb.Erase(writer);
+    try mb.Print(writer);
+    try writer.print("\n", .{});
 }

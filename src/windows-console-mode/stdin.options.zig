@@ -55,7 +55,7 @@ pub const ModeOptions = struct {
 
 const expect = std.testing.expect;
 
-test "StdinModeOptions" {
+test {
     const helpers = struct {
         fn checkOneFlag(opts: *ModeOptions, flag: win.DWORD) !void {
             const result = opts.apply(0);

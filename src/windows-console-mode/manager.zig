@@ -48,11 +48,13 @@ pub const Manager = struct {
     }
 
     /// Restore Stdout from save
-    pub fn RestoreStdout(self: *Manager) !void {
+    pub fn RestoreStdout(self: *Manager) void {
         if (self.saved_stdout == null) {
-            return ManagerErrors.NoSavedMode;
+            return;
         }
-        try self._SetStdoutMode(self.saved_stdout.?);
+        self._SetStdoutMode(self.saved_stdout.?) catch |ig| {
+            _ = &ig;
+        };
     }
 
     /// private, internal for directly setting Stdin mode
@@ -106,5 +108,5 @@ test {
     try m.SaveStdinMode();
     try m.RestoreStdin();
     try m.SaveStdoutMode();
-    try m.RestoreStdout();
+    m.RestoreStdout();
 }
